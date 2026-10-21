@@ -1,6 +1,6 @@
 // swift-tools-version: 6.0
 // Package.swift
-// swiftpm manifest for the mixer menu bar app
+// swiftpm manifest for the mixer menu bar app & its browser extension relay
 
 import PackageDescription
 
@@ -9,5 +9,6 @@ let package = Package(
     platforms: [.macOS(.v15)],
     targets: [
         .executableTarget(name: "Mixer"),
+        .executableTarget(name: "MixerBrowserHost"),
     ]
 )

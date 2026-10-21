@@ -22,8 +22,11 @@ final class MixerModel {
     let processes = AudioProcessMonitor()
     let outputs = OutputDevices()
     let nowPlaying = NowPlaying()
+    let browserTabs = BrowserTabs()
 
     private(set) var settings: [String: AppSettings]
+    // browser rows whose tab list is open
+    private(set) var expandedBrowsers: Set<String> = []
     private(set) var launchAtLogin = SMAppService.mainApp.status == .enabled
     private(set) var permissionDenied = false
     private(set) var tapErrors: [String: String] = [:]
@@ -41,14 +44,45 @@ final class MixerModel {
         reconcile()
     }
 
-    // playing apps, plus the now-playing app while paused so it can be resumed from here
+    // playing apps (incl. the linger window), the now-playing app while paused so it can be resumed from
+    // here, any app w/ non-default settings so a muted app can be unmuted after it goes quiet, & browsers
+    // whose extension still lists tabs (e.g. one we muted)
     var visibleApps: [AudioApp] {
         let media = nowPlaying.info
-        return processes.apps.filter { $0.isPlaying || media?.belongs(to: $0) == true }
+        return processes.apps.filter {
+            $0.isPlaying || media?.belongs(to: $0) == true || settings[$0.id] != nil || !tabs(for: $0).isEmpty
+        }
     }
 
     func media(for app: AudioApp) -> NowPlayingInfo? {
         nowPlaying.info.flatMap { $0.belongs(to: app) ? $0 : nil }
+    }
+
+    func tabs(for app: AudioApp) -> [BrowserTab] {
+        browserTabs.tabs(for: app.id)
+    }
+
+    func isExpanded(_ app: AudioApp) -> Bool {
+        expandedBrowsers.contains(app.id)
+    }
+
+    func toggleExpanded(_ app: AudioApp) {
+        if expandedBrowsers.remove(app.id) == nil {
+            expandedBrowsers.insert(app.id)
+        }
+    }
+
+    // the slider reads site memory rather than the tab's reported multiplier so it doesn't lag a round trip
+    func tabVolume(for tab: BrowserTab) -> Float {
+        browserTabs.volume(forHost: tab.host)
+    }
+
+    func setTabVolume(_ volume: Float, tab: BrowserTab, in app: AudioApp) {
+        browserTabs.setVolume(volume, tab: tab, browser: app.id)
+    }
+
+    func setTabMuted(_ muted: Bool, tab: BrowserTab, in app: AudioApp) {
+        browserTabs.setMuted(muted, tab: tab, browser: app.id)
     }
 
     func settings(for app: AudioApp) -> AppSettings {

@@ -12,7 +12,7 @@ It also replaces Apple's Now Playing menu bar item. The app that's playing media
 - **Silencing noisy apps.** Mute an app's sound effects completely, including Electron and Chromium apps like Slack, Discord, or Claude that play sounds from helper processes.
 - **Boosting quiet sources.** Go up to 200% for a quiet video or call. A soft limiter keeps it from clipping harshly.
 - **Sending apps to different outputs.** Play music on the speakers and a call in your headphones. If a chosen device disconnects, the app falls back to the default output, then switches back when the device returns.
-- **Remembering settings.** Volumes are saved per app and applied again the next time that app makes sound.
+- **Remembering settings.** Volumes are saved per app and applied again the next time that app makes sound. An app you've changed stays in the list while it's running, so a muted app can be unmuted after it goes quiet.
 
 Apps you leave at 100% on the default output aren't touched at all. Mixer only reroutes an app's audio once you change something about it.
 
@@ -43,6 +43,17 @@ To hide Apple's Now Playing item, go to System Settings → Menu Bar → Now Pla
 - Only one app at a time gets the now-playing card, because MediaRemote only reports the app macOS currently considers "now playing." Every app still gets its own slider.
 - The now-playing feature depends on a private framework, so a future macOS update could break it. If that happens, the volume controls keep working.
 - While Mixer is rerouting any app's audio, macOS may show its purple system-audio recording indicator.
+- System alert sounds are hidden rather than listed; use the alert volume slider in System Settings → Sound for those.
+- Without the browser extension below, a browser is one row: every tab mixes inside one browser audio process before macOS sees it.
+
+## Browser tabs
+
+Chromium browsers (Chrome, Brave, Edge, Arc, Vivaldi) can expand into their audible tabs with a mute button and a 0–100% slider per tab. This needs a small companion extension, loaded unpacked:
+
+1. In Mixer's gear menu choose **Set Up Browser Extension…**. Mixer writes a native-messaging manifest for each installed Chromium browser and reveals the extension folder in Finder.
+2. In the browser open `chrome://extensions`, turn on Developer mode, click **Load unpacked**, and pick that folder. Repeat the setup step after reinstalling Mixer.
+
+Tab mute uses the browser's own mute. Tab volume scales the page's audio and video elements, so it works on YouTube and most media sites but not on pages that use Web Audio directly (games, some players); those still mute. Tab volume is remembered per site; tab mute is not. Tabs can't be boosted above 100%.
 
 ## License
 

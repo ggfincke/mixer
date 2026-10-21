@@ -26,10 +26,14 @@ cp "$bin/Mixer" "$app/Contents/MacOS/Mixer"
 cp Resources/Info.plist "$app/Contents/Info.plist"
 cp -R "$adapter_build/MediaRemoteAdapter.framework" "$app/Contents/Resources/"
 cp "$adapter_src/bin/mediaremote-adapter.pl" "$app/Contents/Resources/"
+# browser extension support: the native messaging relay the browser launches, & the extension to load unpacked
+cp "$bin/MixerBrowserHost" "$app/Contents/MacOS/MixerBrowserHost"
+cp -R Extension "$app/Contents/Resources/Extension"
 
 # a stable identity keeps the audio-capture grant across rebuilds; ad-hoc signing re-prompts every build
 identity="${MIXER_SIGN_IDENTITY:-$(security find-identity -v -p codesigning | awk -F'"' '/Apple Development/ { print $2; exit }')}"
 codesign --force --sign "${identity:--}" "$app/Contents/Resources/MediaRemoteAdapter.framework"
+codesign --force --sign "${identity:--}" "$app/Contents/MacOS/MixerBrowserHost"
 codesign --force --sign "${identity:--}" "$app"
 echo "built $app (signed: ${identity:-ad-hoc})"
 

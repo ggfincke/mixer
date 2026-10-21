@@ -18,6 +18,11 @@ struct MixerView: View {
                 ForEach(Array(model.visibleApps.enumerated()), id: \.element.id) { index, app in
                     if index > 0 { Divider().padding(.horizontal, 12) }
                     AppRow(model: model, app: app)
+                    if model.isExpanded(app) {
+                        ForEach(model.tabs(for: app)) { tab in
+                            TabRow(model: model, app: app, tab: tab)
+                        }
+                    }
                 }
             }
 
@@ -48,6 +53,8 @@ struct MixerView: View {
                         get: { model.launchAtLogin },
                         set: { model.setLaunchAtLogin($0) }
                     ))
+                    Divider()
+                    Button("Set Up Browser Extension…") { BrowserSetup.install() }
                 } label: {
                     Image(systemName: "gearshape")
                 }
@@ -76,9 +83,20 @@ private struct AppRow: View {
                 .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(media?.title ?? app.name)
-                    .font(.headline)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(media?.title ?? app.name)
+                        .font(.headline)
+                        .lineLimit(1)
+                    // browsers w/ the extension connected drop down into their tabs
+                    if !model.tabs(for: app).isEmpty {
+                        Button { model.toggleExpanded(app) } label: {
+                            Image(systemName: model.isExpanded(app) ? "chevron.down" : "chevron.right")
+                                .font(.caption.bold())
+                        }
+                        .buttonStyle(.borderless)
+                        .help(model.isExpanded(app) ? "Hide Tabs" : "Show Tabs")
+                    }
+                }
                 if let media {
                     Text(media.subtitle ?? app.name)
                         .font(.subheadline)
@@ -180,6 +198,79 @@ private struct AppRow: View {
     }
 
     private var deviceMenu: some View {
+        DeviceMenu(model: model, app: app)
+    }
+}
+
+// one browser tab under its app row: favicon, title, mute & a 0-100% slider
+private struct TabRow: View {
+    let model: MixerModel
+    let app: AudioApp
+    let tab: BrowserTab
+
+    var body: some View {
+        HStack(spacing: 8) {
+            favicon
+                .frame(width: 16, height: 16)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(tab.title.isEmpty ? tab.host : tab.title)
+                    .font(.subheadline)
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Button {
+                        model.setTabMuted(!tab.isMuted, tab: tab, in: app)
+                    } label: {
+                        Image(systemName: tab.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                            .frame(width: 18)
+                    }
+                    .buttonStyle(.borderless)
+                    .help(tab.isMuted ? "Unmute Tab" : "Mute Tab")
+
+                    Slider(value: volume, in: 0 ... 1)
+                        .controlSize(.mini)
+                        .disabled(tab.isMuted)
+
+                    Text("\(Int((model.tabVolume(for: tab) * 100).rounded()))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 36, alignment: .trailing)
+                }
+            }
+        }
+        .padding(.leading, 62)
+        .padding(.trailing, 12)
+        .padding(.vertical, 6)
+    }
+
+    @ViewBuilder
+    private var favicon: some View {
+        if let url = tab.favIconURL, url.scheme?.hasPrefix("http") == true || url.scheme == "data" {
+            AsyncImage(url: url) { image in
+                image.resizable()
+            } placeholder: {
+                Image(systemName: "globe").foregroundStyle(.secondary)
+            }
+        } else {
+            Image(systemName: "globe").foregroundStyle(.secondary)
+        }
+    }
+
+    private var volume: Binding<Double> {
+        Binding(
+            get: { Double(model.tabVolume(for: tab)) },
+            set: { model.setTabVolume(Float($0), tab: tab, in: app) }
+        )
+    }
+}
+
+// output picker for one app row
+private struct DeviceMenu: View {
+    let model: MixerModel
+    let app: AudioApp
+
+    private var settings: AppSettings { model.settings(for: app) }
+
+    var body: some View {
         Menu {
             Button {
                 model.update(app) { $0.outputUID = nil }
